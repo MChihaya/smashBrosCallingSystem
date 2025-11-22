@@ -1,0 +1,10 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # ★重要: アップロードするフォルダ名に合わせてください (/smash/)
+  RewriteBase /smash/
+  
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /smash/index.html [L]
+</IfModule>
