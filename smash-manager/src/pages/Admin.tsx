@@ -79,7 +79,7 @@ export const Admin = () => {
 
   const getViewerUrl = () => {
     const path = window.location.pathname;
-    return `${path}#/viewer`;
+    return `${path}viewer`;
   };
 
   const filteredTickets = tickets.filter(t => {
@@ -134,7 +134,7 @@ export const Admin = () => {
     <div className="max-w-7xl mx-auto p-2 md:p-4 bg-slate-100 min-h-screen text-slate-800 font-sans">
       <header className="flex flex-col md:flex-row md:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Smash 整理券管理 v9.1</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Smash 整理券管理 v9</h1>
           <div className="text-xs md:text-sm text-slate-500 hidden md:block">Key: n=次, u=Undo, 1-9=卓操作, Space=読上</div>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm bg-white p-2 rounded shadow-sm md:bg-transparent md:shadow-none">
