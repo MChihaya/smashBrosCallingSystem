@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSmashState } from "../hooks/useSmashState";
 
 export const Viewer = () => {
@@ -10,9 +10,18 @@ export const Viewer = () => {
     speak, beep
   } = useSmashState();
 
+  // ★追加: 音声再生許可フラグ
+  const [isAudioAllowed, setIsAudioAllowed] = useState(false);
   const prevCalledRef = useRef<number | null>(null);
 
+  // 呼び出し番号が変わったときに音を鳴らす
   useEffect(() => {
+    // まだ許可されていない、または初回ロード時(null)は鳴らさない
+    if (!isAudioAllowed) {
+        prevCalledRef.current = currentCalled;
+        return;
+    }
+
     if (currentCalled && currentCalled !== prevCalledRef.current) {
       setTimeout(() => {
         speak(`次は番号、${currentCalled}番です`);
@@ -20,13 +29,36 @@ export const Viewer = () => {
       }, 500);
     }
     prevCalledRef.current = currentCalled;
-  }, [currentCalled, speak, beep]);
+  }, [currentCalled, isAudioAllowed, speak, beep]);
 
   const calledTickets = tickets.filter(t => t.status === "called");
   const waitingTickets = tickets.filter(t => ["waiting", "returned", "skipped"].includes(t.status));
 
+  // ★追加: 開始ボタンを押して音声を有効化する関数
+  const handleStart = () => {
+    setIsAudioAllowed(true);
+    beep(); // 一度鳴らしてブラウザの制限を解除する
+    // 初回のアナウンスが必要ならここで行う
+    if (currentCalled) speak(`現在の呼び出しは、${currentCalled}番です`);
+  };
+
   return (
-    <div className="h-screen w-screen bg-slate-900 text-white flex flex-col overflow-hidden font-sans">
+    <div className="h-screen w-screen bg-slate-900 text-white flex flex-col overflow-hidden font-sans relative">
+      
+      {/* ★追加: 音声有効化のためのスタートオーバーレイ */}
+      {!isAudioAllowed && (
+        <div className="absolute inset-0 z-50 bg-slate-900/95 flex flex-col items-center justify-center text-center p-4">
+          <h1 className="text-4xl font-bold mb-8 tracking-widest">Smash Monitor</h1>
+          <p className="text-slate-400 mb-8">ブラウザの制限により、音声再生には操作が必要です。</p>
+          <button 
+            onClick={handleStart}
+            className="bg-emerald-500 hover:bg-emerald-400 text-white text-xl font-bold py-6 px-12 rounded-full shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all active:scale-95 animate-pulse"
+          >
+            タップしてモニタリング開始 🔊
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex justify-between items-center p-4 bg-slate-800 shadow-md z-10">
         <h1 className="text-xl font-bold tracking-wider">Smash 呼び出しモニター</h1>
@@ -45,9 +77,8 @@ export const Viewer = () => {
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         
-        {/* メインエリア (呼び出し番号のみ表示) */}
+        {/* メインエリア */}
         <div className="flex-1 bg-slate-900 flex flex-col items-center justify-center p-8 relative border-r border-slate-700">
-          {/* ★修正: 日本語化 & サイズアップ */}
           <div className="absolute top-6 left-6 text-slate-400 font-bold text-2xl tracking-widest">現在の呼び出し</div>
           
           {calledTickets.length > 0 ? (
@@ -61,9 +92,8 @@ export const Viewer = () => {
                     transition-all duration-500
                   `}>
                     <span className={`font-bold mb-2 ${isMain ? 'text-3xl opacity-80' : 'text-xl opacity-50'}`}>
-                      整理券番号
+                      Ticket No.
                     </span>
-                    {/* ★卓番号の表示を削除し、番号だけを巨大化 */}
                     <span className={`font-mono font-bold ${isMain ? 'text-9xl md:text-[12rem] tracking-tighter leading-none' : 'text-6xl'}`}>
                       #{t.num}
                     </span>
@@ -81,7 +111,6 @@ export const Viewer = () => {
         {/* 右側: 待機リスト */}
         <div className="h-1/3 md:h-full md:w-96 bg-slate-800 flex flex-col border-t md:border-t-0 border-slate-700 shadow-2xl z-10">
           <div className="p-4 bg-slate-700 shadow-sm flex justify-between items-center border-b border-slate-600">
-            {/* ★修正: 日本語化 & サイズアップ */}
             <span className="font-bold text-slate-200 text-2xl tracking-widest">待機リスト</span>
             <span className="bg-slate-600 px-3 py-1 rounded-full text-lg font-bold text-white">{waitingTickets.length}</span>
           </div>

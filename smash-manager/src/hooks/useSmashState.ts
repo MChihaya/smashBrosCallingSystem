@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Ticket, Table, HistoryItem, TicketStatus } from "../types";
-// ヘルパー関数とカスタムフックをインポート
 import { isTableOccupied, findNextIndex, analyzeBlockReason } from "../utils/smashLogic";
 import { useAudio } from "./useAudio";
 
@@ -14,8 +13,7 @@ export function useSmashState() {
   const [uiSettings, setUiSettings] = useState({ fontsize: "medium", columns: 8 });
   const [currentCalled, setCurrentCalled] = useState<number | null>(null);
 
-  // --- Hooks (Audio) ---
-  // ★修正: useAudio から機能を受け取る (これでエラー解消)
+  // --- Audio Hook Integration ---
   const { 
     voiceVolume, setVoiceVolume, 
     beepVolume, setBeepVolume, 
@@ -118,24 +116,28 @@ export function useSmashState() {
        if(last) last.desc += ` → 呼出 #${t.num}`;
     }
     
-    // 外部フックの関数を使用
     speak(`次は番号、${t.num}番です`);
     beep();
     saveState(newTickets, targetTables, finalHistory);
   };
 
+  // ★修正: 手動呼び出し時の空き卓チェックを強化
   const tryCallTicket = (num: number) => {
     if (tickets.some(t => t.status === "called")) return alert("既に呼び出し中の整理券があります");
     const ticket = tickets.find(t => t.num === num);
     if (!ticket) return;
 
     const emptyTables = tables.filter(tb => !tb.occupiedBy);
+
     if (ticket.nominatedTable > 0) {
       const table = tables.find(tb => tb.id === ticket.nominatedTable);
       if (!table) return alert(`指定卓${ticket.nominatedTable}なし`);
       if (isTableOccupied(ticket.nominatedTable, tables)) return alert(`卓${ticket.nominatedTable}は埋まっています`);
       if (ticket.dlc && !table.hasDlc) return alert(`卓${ticket.nominatedTable}はDLC非対応のため呼べません`);
     } else {
+      // ★追加: 指名なしの場合、そもそも空き卓があるかチェック
+      if (emptyTables.length === 0) return alert("空き卓がありません");
+
       if (ticket.dlc) {
          if (!emptyTables.some(tb => tb.hasDlc)) return alert("DLC対応の空き卓がありません");
       }
@@ -307,6 +309,6 @@ export function useSmashState() {
     autoCallEnabled, setAutoCallEnabled,
     callNext, assignToTable, clearTableOrEndMatch, updateStatus, 
     addTickets, toggleTableDlc, updateTableCount,
-    speak, beep,undo, resetAll, completeReset, tryCallTicket, updateTicket
+    speak, beep, undo, resetAll, completeReset, tryCallTicket, updateTicket
   };
 }

@@ -20,6 +20,7 @@ export function useAudio() {
       if (jpVoice) setSelectedVoice(jpVoice);
     };
 
+    // Chrome等は読み込みに時間がかかるためイベントで待機
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = setVoice;
     }
