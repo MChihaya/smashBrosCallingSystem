@@ -121,23 +121,19 @@ export function useSmashState() {
     saveState(newTickets, targetTables, finalHistory);
   };
 
-  // ★修正: 手動呼び出し時の空き卓チェックを強化
   const tryCallTicket = (num: number) => {
     if (tickets.some(t => t.status === "called")) return alert("既に呼び出し中の整理券があります");
     const ticket = tickets.find(t => t.num === num);
     if (!ticket) return;
 
     const emptyTables = tables.filter(tb => !tb.occupiedBy);
-
     if (ticket.nominatedTable > 0) {
       const table = tables.find(tb => tb.id === ticket.nominatedTable);
       if (!table) return alert(`指定卓${ticket.nominatedTable}なし`);
       if (isTableOccupied(ticket.nominatedTable, tables)) return alert(`卓${ticket.nominatedTable}は埋まっています`);
       if (ticket.dlc && !table.hasDlc) return alert(`卓${ticket.nominatedTable}はDLC非対応のため呼べません`);
     } else {
-      // ★追加: 指名なしの場合、そもそも空き卓があるかチェック
       if (emptyTables.length === 0) return alert("空き卓がありません");
-
       if (ticket.dlc) {
          if (!emptyTables.some(tb => tb.hasDlc)) return alert("DLC対応の空き卓がありません");
       }
@@ -228,8 +224,14 @@ export function useSmashState() {
     }
   };
 
-  const addTickets = (count: number, dlc: boolean, nom: number) => {
-    const lastNum = tickets.length > 0 ? tickets[tickets.length - 1].num : 0;
+  // ★修正: 開始番号(customStartNum)を指定できるように変更
+  const addTickets = (count: number, dlc: boolean, nom: number, customStartNum?: number) => {
+    // 開始番号の決定: 指定があればそれ、なければ現在の最大値+1
+    let startNum = customStartNum;
+    if (startNum === undefined || startNum === null) {
+        const lastNum = tickets.reduce((max, t) => Math.max(max, t.num), 0);
+        startNum = lastNum + 1;
+    }
     
     let finalDlc = dlc;
     if (nom > 0) {
@@ -240,10 +242,19 @@ export function useSmashState() {
     let desc = `整理券追加 x${count}`;
     if (finalDlc) desc += " (DLC)";
     if (nom > 0) desc += ` (指名:卓${nom})`;
+    
+    // 指定番号がある場合は履歴にも記載すると親切
+    if (customStartNum !== undefined) desc += ` (No.${startNum}〜)`;
+
     const newHistory = pushHistory(desc, history);
 
+    // startNum から連番で作成
     const newItems: Ticket[] = Array.from({length: count}, (_, i) => ({
-      num: lastNum + i + 1, status: "waiting", dlc: finalDlc, nominatedTable: nom, table: null
+      num: startNum! + i, 
+      status: "waiting", 
+      dlc: finalDlc, 
+      nominatedTable: nom, 
+      table: null
     }));
     const newTickets = [...tickets, ...newItems];
     

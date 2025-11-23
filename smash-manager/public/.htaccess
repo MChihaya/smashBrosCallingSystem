@@ -1,3 +1,9 @@
+<Files "api.php">
+  <IfModule mod_siteguard.c>
+    SiteGuard_User_ExcludeSig all
+  </IfModule>
+</Files>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   # ★重要: アップロードするフォルダ名に合わせてください (/smash/)

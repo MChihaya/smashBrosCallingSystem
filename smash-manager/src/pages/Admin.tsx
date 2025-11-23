@@ -3,16 +3,19 @@ import { useSmashState } from "../hooks/useSmashState";
 import { TicketCard } from "../components/TicketCard";
 import { TableManager } from "../components/TableManager";
 import { HistoryList } from "../components/HistoryList";
-import { LoginModal } from "../components/LoginModal"; // ★追加
+import { LoginModal } from "../components/LoginModal";
 import type { Table } from "../types";
 
-// 整理券追加パネル
+// 整理券追加パネル (★修正: startNum入力欄を追加)
 const AddTicketPanel = ({ 
-  addDlc, setAddDlc, addNom, tables, onAdd, onNomChange 
+  addDlc, setAddDlc, addNom, addStartNum, setAddStartNum, tables, onAdd, onNomChange 
 }: {
   addDlc: boolean;
   setAddDlc: (v: boolean) => void;
   addNom: number;
+  // ★追加 props
+  addStartNum: string;
+  setAddStartNum: (v: string) => void;
   tables: Table[];
   onAdd: () => void;
   onNomChange: (id: number) => void;
@@ -25,14 +28,14 @@ const AddTicketPanel = ({
         className="bg-sky-600 text-white py-3 rounded font-bold hover:bg-sky-700 shadow-md active:scale-95 transition-transform">
         追加 (+1)
       </button>
-      <div className="flex justify-between items-center text-sm gap-2">
+      <div className="flex items-center gap-2">
           <label className="flex-1 flex justify-center items-center gap-2 cursor-pointer bg-slate-50 px-2 py-2 rounded border hover:bg-slate-100">
             <input type="checkbox" checked={addDlc} onChange={e=>setAddDlc(e.target.checked)} className="w-4 h-4"/> 
-            <span className="font-bold text-slate-700">DLC</span>
+            <span className="font-bold text-slate-700 text-sm">DLC</span>
           </label>
           <div className="flex-1 flex items-center gap-1 bg-slate-50 px-2 py-2 rounded border">
             <span className="text-xs text-slate-500">指名</span>
-            <select value={addNom} onChange={e=>onNomChange(Number(e.target.value))} className="bg-transparent font-bold w-full">
+            <select value={addNom} onChange={e=>onNomChange(Number(e.target.value))} className="bg-transparent font-bold w-full text-sm">
                 <option value="0">なし</option>
                 {tables.map(t => (
                   <option key={t.id} value={t.id}>卓{t.id}{t.hasDlc ? '(D)' : ''}</option>
@@ -40,20 +43,27 @@ const AddTicketPanel = ({
             </select>
           </div>
       </div>
+      {/* ★追加: 開始番号入力欄 */}
+      <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded border">
+         <span className="text-xs text-slate-500 w-16">開始No.</span>
+         <input 
+           type="number" 
+           value={addStartNum} 
+           onChange={e => setAddStartNum(e.target.value)} 
+           placeholder="自動" 
+           className="bg-transparent w-full font-mono text-right outline-none placeholder:text-slate-300"
+         />
+      </div>
     </div>
   </div>
 );
 
 export const Admin = () => {
-  // ★追加: 認証状態の管理
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // セッションストレージを確認 (タブを閉じるとリセットされる)
     const auth = sessionStorage.getItem("smash_admin_auth");
-    if (auth === "true") {
-      setIsAuthenticated(true);
-    }
+    if (auth === "true") setIsAuthenticated(true);
   }, []);
 
   const handleLogin = () => {
@@ -61,7 +71,6 @@ export const Admin = () => {
     setIsAuthenticated(true);
   };
 
-  // --- ここから既存のロジック ---
   const {
     tickets, tables, history, currentCalled, 
     voiceVolume, setVoiceVolume, beepVolume, setBeepVolume,
@@ -76,10 +85,12 @@ export const Admin = () => {
   const [tableCountInput, setTableCountInput] = useState(3);
   const [addDlc, setAddDlc] = useState(false);
   const [addNom, setAddNom] = useState(0);
+  // ★追加: 開始番号のstate (空文字許容のためstring)
+  const [addStartNum, setAddStartNum] = useState("");
 
   const getViewerUrl = () => {
     const path = window.location.pathname;
-    return `${path}viewer`;
+    return `${path}#/viewer`;
   };
 
   const filteredTickets = tickets.filter(t => {
@@ -92,9 +103,7 @@ export const Admin = () => {
   const completedTickets = tickets.filter(t => t.status === "completed");
 
   useEffect(() => {
-    // ログインしていない時はショートカット無効
     if (!isAuthenticated) return;
-
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
       if (e.key === 'n') callNext();
@@ -120,12 +129,16 @@ export const Admin = () => {
   };
 
   const handleAddTicket = () => {
-    addTickets(1, addDlc, addNom);
+    // ★修正: addStartNum をパースして渡す
+    const start = addStartNum ? Number(addStartNum) : undefined;
+    addTickets(1, addDlc, addNom, start);
+    
+    // リセット
     setAddNom(0); 
     setAddDlc(false);
+    setAddStartNum(""); // 自動に戻す
   };
 
-  // ★追加: ログインしていない場合はモーダルを表示
   if (!isAuthenticated) {
     return <LoginModal onLogin={handleLogin} />;
   }
@@ -134,7 +147,7 @@ export const Admin = () => {
     <div className="max-w-7xl mx-auto p-2 md:p-4 bg-slate-100 min-h-screen text-slate-800 font-sans">
       <header className="flex flex-col md:flex-row md:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Smash 整理券管理 v9</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Smash 整理券管理 v9.2</h1>
           <div className="text-xs md:text-sm text-slate-500 hidden md:block">Key: n=次, u=Undo, 1-9=卓操作, Space=読上</div>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm bg-white p-2 rounded shadow-sm md:bg-transparent md:shadow-none">
@@ -146,9 +159,12 @@ export const Admin = () => {
       </header>
 
       <main className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
         <div className="block md:hidden">
+          {/* ★修正: propsを追加 */}
           <AddTicketPanel 
             addDlc={addDlc} setAddDlc={setAddDlc} addNom={addNom} 
+            addStartNum={addStartNum} setAddStartNum={setAddStartNum}
             tables={tables} onAdd={handleAddTicket} onNomChange={handleAddNomChange} 
           />
         </div>
@@ -212,7 +228,12 @@ export const Admin = () => {
 
         <aside className="flex flex-col gap-4">
           <div className="hidden md:block">
-            <AddTicketPanel addDlc={addDlc} setAddDlc={setAddDlc} addNom={addNom} tables={tables} onAdd={handleAddTicket} onNomChange={handleAddNomChange} />
+            {/* ★修正: propsを追加 */}
+            <AddTicketPanel 
+              addDlc={addDlc} setAddDlc={setAddDlc} addNom={addNom} 
+              addStartNum={addStartNum} setAddStartNum={setAddStartNum}
+              tables={tables} onAdd={handleAddTicket} onNomChange={handleAddNomChange} 
+            />
           </div>
           <div className="bg-white p-4 rounded shadow-sm">
             <div className="flex justify-between items-center mb-2 border-b pb-2"><h3 className="font-bold text-sm text-slate-600">卓の管理</h3><div className="flex items-center gap-1 text-sm"><input type="number" value={tableCountInput} onChange={e=>setTableCountInput(Number(e.target.value))} onBlur={() => updateTableCount(tableCountInput)} className="w-12 border p-1 rounded text-center bg-slate-50"/><span className="text-xs">卓</span></div></div>
